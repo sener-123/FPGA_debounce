@@ -1,0 +1,10 @@
+# 开发板资料与工具输出不入库
+*.pdf
+*.jou
+*.log
+*.bak
+*.backup
+
+# PDS 工程中间文件
+prj/*/impl/
+prj/*/synthesis/
