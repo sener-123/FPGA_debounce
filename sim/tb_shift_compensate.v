@@ -47,6 +47,10 @@ module tb_shift_compensate;
         .comp_valid (comp_valid),
         .comp_x     (comp_x),
         .comp_y     (comp_y),
+        .crop_col0  (12'd0),
+        .crop_row0  (12'd0),
+        .crop_w     (W_OUT),
+        .crop_h     (V_OUT),
         .px_de_o    (px_de_o),
         .px_data_o  (px_data_o),
         .px_sof_o   (px_sof_o),
@@ -91,6 +95,7 @@ module tb_shift_compensate;
     //-----------------------------------------------------------------
     integer errs = 0;
     integer out_x, out_y, exp_abs, DX, DY, guard;
+    integer src_fx, src_fy;
 
     task check_frame(input integer fb, input integer cdx, input integer cdy);
         begin
@@ -124,7 +129,13 @@ module tb_shift_compensate;
                             disable check_frame;
                         end
                     end
-                    exp_abs = fb + out_y*W + out_x - DY*W - DX;
+                    // 源坐标 = 输出坐标 - (DX, DY); 越出本帧为黑色
+                    src_fx = out_x - DX;
+                    src_fy = out_y - DY;
+                    if (src_fx < 0 || src_fy < 0)
+                        exp_abs = 0;
+                    else
+                        exp_abs = fb + src_fy*W + src_fx;
                     if (px_data_o !== exp_abs[15:0]) begin
                         $display("ERROR: out(%0d,%0d)=%h expect %h (frame %0d)",
                                  out_x, out_y, px_data_o, exp_abs[15:0], fb);

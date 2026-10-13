@@ -1,10 +1,30 @@
 # 开发板资料与工具输出不入库
 *.pdf
+*.zip
 *.jou
 *.log
 *.bak
 *.backup
+*.wlf
+transcript
+modelsim.ini
 
-# PDS 工程中间文件
-prj/*/impl/
-prj/*/synthesis/
+# 正点原子原始例程工程(参考, 不重复入库; 所需 RTL 已复制到 rtl/)
+38_ov5640_lcd/
+prj/
+temp_gbk_conv/
+
+# ModelSim 工作库与中间产物
+sim/work/
+sim_quick/work/
+sim_quick/modelsim.ini
+sim_quick/transcript
+sim/*_log.txt
+sim/dbg_*.txt
+sim/dbg*.do
+sim_quick/dbg*.v
+sim_quick/dbg*.do
+sim_quick/*_log.txt
+
+# 仿真调试输出
+sim_quick/dbg_tb_out.txt

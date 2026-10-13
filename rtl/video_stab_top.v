@@ -143,6 +143,9 @@ module video_stab_top #(
     wire        px_eol_o;
     wire        px_eof_o;
 
+    // 本顶层(直通演示)使用与旧版一致的四边裁剪窗口
+    localparam SHIFT_BASE_T = MAX_SHIFT + 1;
+
     shift_compensate #(
         .H_ACTIVE   (H_ACTIVE),
         .V_ACTIVE   (V_ACTIVE),
@@ -157,6 +160,10 @@ module video_stab_top #(
         .comp_valid (comp_valid_w),
         .comp_x     (comp_x_w),
         .comp_y     (comp_y_w),
+        .crop_col0  (12'd0),
+        .crop_row0  (12'd0),
+        .crop_w     (H_ACTIVE - 2*SHIFT_BASE_T),
+        .crop_h     (V_ACTIVE - 2*SHIFT_BASE_T),
         .px_de_o    (px_de_o),
         .px_data_o  (px_data_o),
         .px_sof_o   (px_sof_o),
