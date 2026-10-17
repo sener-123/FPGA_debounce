@@ -23,11 +23,12 @@
 //           TMDS 5x 串行时钟 clk_hdmi_5x = 5*像素时钟(约 210MHz)。
 // 资源    : 约 33 个 18Kb 块 RAM(环形缓冲 + 块图 RAM), 0 DSP,
 //           无 DDR3 控制器。
-// 注意    : 1. 需用户例化 PLL IP(名 pll_clk): 输入 50MHz, 输出
-//              clkout0 = 5*像素时钟(约 210MHz)。理想情况下应以
-//              cam_pclk 为 PLL 输入产生 2.5x(210MHz)以严格锁相;
-//              若 cam_pclk 引脚非时钟专用脚, 则退化为自由振荡
-//              210MHz, 串行器逐像素重同步可容忍轻微相位漂移。
+// 注意    : 1. 需用户例化 PLL IP(名 pll, 端口 pll_rst/clkin1/
+//              pll_lock/clkout0/clkout1): 输入 50MHz, 输出
+//              clkout0 = 210MHz = 5*像素时钟(5*42MHz, TMDS 5x 串行
+//              时钟), clkout1 本版未使用。像素时钟为 cam_pclk/2
+//              (与摄像头同源), 210MHz 与之非同源, 串行器逐像素
+//              重同步可容忍轻微相位漂移。
 //           2. 像素时钟为 fabric 分频时钟(cam_pclk/2), 上板时若
 //              时序收敛困难, 请改用 PLL 输出 0.5x/2.5x 组合;
 //           3. 摄像头默认配置 1280x720 RGB565@30(HTS=1650,VTS=845,
@@ -113,12 +114,12 @@ module video_stab_hdmi #(
     //=================================================================
     // 1. PLL(用户 IP: 输入 50MHz, 输出 5x 像素时钟约 210MHz)
     //=================================================================
-    pll_clk u_pll_clk (
+    pll u_pll (
         .pll_rst  (~sys_rst_n),
         .clkin1   (sys_clk),
-        .clkout0  (clk_hdmi_5x),
-        .clkout1  (),
-        .pll_lock (pll_lock)
+        .pll_lock (pll_lock),
+        .clkout0  (clk_hdmi_5x),   // 210MHz = 5x 像素时钟(TMDS 5x 串行)
+        .clkout1  ()               // 本版未使用
     );
 
     //=================================================================

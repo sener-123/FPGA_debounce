@@ -1,15 +1,16 @@
 //=====================================================================
 // 文件    : pll_clk_sim.v (仿真模型)
-// 功能    : PLL IP 的仿真替代模型(与用户 PDS 工程中的 pll_clk IP
-//           端口一致)。实际板级频率: clkout0=74.25MHz, clkout1=
-//           371.25MHz; 仿真中 clkout0 直通 clkin1(50MHz), clkout1
-//           为 250MHz 自由振荡(仅用于保持串行器运转, 其输出不在
-//           系统级测试台中被检查)。
-// 使用    : 仿真编译本文件并定义 SIM_PLL(顶层已直接例化 pll_clk,
-//           编译时以本文件替代 IP 即可)。
+// 功能    : PLL IP 的仿真替代模型(与用户 PDS 工程中的 pll IP 端口
+//           一致: pll_rst/clkin1/pll_lock/clkout0/clkout1)。
+//           无 DDR3 版: clkout0=210MHz(TMDS 5x); 仿真中 clkout0
+//           直通 clkin1(50MHz), 系统级测试台不检查 TMDS 串行位。
+//           DDR3 版: clkout0=74.25MHz, clkout1=371.25MHz; 仿真中
+//           clkout0 直通 50MHz, clkout1 冻结(不检查串行位)。
+// 使用    : 仿真编译本文件(顶层已直接例化 pll, 编译时以本文件
+//           替代 IP 即可)。
 //=====================================================================
 `timescale 1ns/1ps
-module pll_clk (
+module pll (
     input  wire pll_rst,     // 高有效复位
     input  wire clkin1,      // 50MHz
     output wire clkout0,     // 仿真: 直通 50MHz

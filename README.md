@@ -93,7 +93,7 @@ FPGA_debounce/
 
 | IP | 用途 | 说明 |
 |----|------|------|
-| **PLL**（名 `pll_clk`） | 时钟 | 输入 50MHz 晶振（R4），输出 **clkout0 = 5× 像素时钟 ≈ 210MHz**（TMDS 5× 串行时钟，5×cam_pclk/2）。理想情况以 `cam_pclk` 为 PLL 输入产生 2.5×（210MHz）以严格锁相；退化为 50MHz→210MHz 亦可，串行器逐像素重同步容忍轻微漂移。 |
+| **PLL**（名 `pll`） | 时钟 | 输入 50MHz 晶振（R4），输出 **clkout0 = 210MHz**（=5× 像素时钟 5×cam_pclk/2，TMDS 5× 串行时钟）；`clkout1` 无 DDR3 版未使用。端口 `pll_rst/clkin1/pll_lock/clkout0/clkout1`。 |
 | **DDR3 IP**（名 `ddr3_ip`） | 内存 | 仅 DDR3 版（`video_stab_sys.v`）需要，与正点原子 `38_ov5640_lcd` 例程完全相同（32 位，含内部 PLL/PHY）。 |
 | FIFO IP ×2 | DDR3 用户接口 | 仅 DDR3 版需要，`wr_fifo`、`rd_fifo`（正点原子例程自带）。 |
 

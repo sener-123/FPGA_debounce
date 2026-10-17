@@ -24,8 +24,9 @@
 // 平台    : 紫光同创 Logos-2 PGL22G6CMBG324 (PGL22G 开发板)
 // 时钟    : sys_clk 50MHz(晶振 V9); PLL 输出 74.25MHz/371.25MHz
 // 资源    : 约 45 个 18Kb 块 RAM + 少量逻辑, 0 DSP(详见 使用说明.md)
-// 注意    : 1. 需用户例化 PLL IP(名 pll_clk): 输入 50MHz,
-//              输出 clkout0=74.25MHz, clkout1=371.25MHz;
+// 注意    : 1. 需用户例化 PLL IP(名 pll, 端口 pll_rst/clkin1/
+//              pll_lock/clkout0/clkout1): 输入 50MHz, 输出
+//              clkout0=74.25MHz, clkout1=371.25MHz;
 //           2. 需 DDR3 IP(名 ddr3_ip)与 wr_fifo/rd_fifo IP,
 //              与正点原子 ov5640_lcd 例程相同;
 //           3. 板上摄像头 XCLK 由底板提供, 本工程不输出;
@@ -179,12 +180,12 @@ module video_stab_sys #(
     //=================================================================
     // 1. PLL(用户 IP: 输入 50MHz, 输出 74.25MHz + 371.25MHz)
     //=================================================================
-    pll_clk u_pll_clk (
+    pll u_pll (
         .pll_rst  (~sys_rst_n),
         .clkin1   (sys_clk),
-        .clkout0  (clk_hdmi_pix),
-        .clkout1  (clk_hdmi_5x),
-        .pll_lock (pll_lock)
+        .pll_lock (pll_lock),
+        .clkout0  (clk_hdmi_pix),  // DDR3 版: 74.25MHz(需重配 PLL)
+        .clkout1  (clk_hdmi_5x)    // DDR3 版: 371.25MHz(需重配 PLL)
     );
 
     //=================================================================
