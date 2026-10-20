@@ -7,7 +7,7 @@
 //            内部像素流协议 px_*(见 接口说明.md)。
 //            px_sof 约定: 帧起始 1 拍脉冲, 位于场消隐期(首像素之前),
 //            由 cmos_frame_vsync 的上升沿产生。
-// 平台    : 紫光同创 Logos-2 PGL22G6CMBG324 (PGL22G 开发板)
+// 平台    : 正点原子达芬奇 Pro Logos2 (PG2L200H-6IFBB484)
 // 时钟    : 全部逻辑工作于摄像头像素时钟 cam_pclk(= px_clk)
 // 资源    : 少量计数器与寄存器, 不使用块 RAM/DSP
 // 注意    : 1. H_ACTIVE/V_ACTIVE 必须与 OV5640 寄存器配置的输出

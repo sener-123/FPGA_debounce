@@ -14,6 +14,7 @@ module sim_cam_source #(
     parameter H = 1280,
     parameter V = 720,
     parameter ROW_BLANK = 300,     // 行消隐(cam_pclk 拍)
+    parameter DRIFT_START_FRAME = 8, // First frame with a 16-pixel injected shift
     parameter V_BLANK   = 200      // 场消隐行数
 )(
     input  wire        cam_pclk,
@@ -59,8 +60,8 @@ module sim_cam_source #(
                     // 帧 0~7 静止(dx=0); 帧 8 起每帧水平漂移 +16 像素
                     // (=1 块, 运动估计可见; 此处 frame_cnt 为旧值,
                     //  进入帧 8 时旧值=7 -> dx=16)
-                    dx_inj <= (frame_cnt < 6'd7) ? 10'd0
-                             : ({4'd0, frame_cnt} - 10'd6) << 4;
+                    dx_inj <= (frame_cnt < DRIFT_START_FRAME-1) ? 10'd0
+                             : ({4'd0, frame_cnt} - (DRIFT_START_FRAME-2)) << 4;
                 end else begin
                     y_cnt <= y_cnt + 12'd1;
                 end

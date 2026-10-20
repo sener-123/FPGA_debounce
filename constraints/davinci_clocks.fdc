@@ -1,0 +1,7 @@
+# PDS ADS constraint format; equivalent to davinci_clocks.sdc. Load only one.
+# Both board tops: camera nominal PCLK is 84 MHz (verify actual module).
+create_clock -name sys_clk -period 20.000 [get_ports {sys_clk}]
+create_clock -name cam_pclk -period 11.905 [get_ports {cam_pclk}]
+# Import PLL and (for sys) DDR3 generated timing constraints from PDS IP.
+# Do not declare pixel and 5x clocks asynchronous: serializer requires coherence.
+# This is a clock baseline, not a complete board timing sign-off.

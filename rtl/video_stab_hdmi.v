@@ -17,23 +17,17 @@
 //   显示 FIFO / LCD 通路, 时钟域大幅简化。HDMI 刷新率 = 摄像头帧率
 //   (30Hz), 不再做 30->60 帧率转换, 也无法做不同分辨率缩放。
 //
-// 平台    : 紫光同创 Logos-2 PGL22G6CMBG324 (PGL22G 开发板)
+// 平台    : 正点原子达芬奇 Pro Logos2 (PG2L200H-6IFBB484)
 // 时钟    : sys_clk 50MHz(晶振); 像素时钟 = cam_pclk/2(约 42MHz,
-//           由摄像头像素时钟二分频得到, 与摄像头同源锁相);
+//           由以摄像头为输入的 PLL 产生, 与串行时钟同源锁相);
 //           TMDS 5x 串行时钟 clk_hdmi_5x = 5*像素时钟(约 210MHz)。
 // 资源    : 约 33 个 18Kb 块 RAM(环形缓冲 + 块图 RAM), 0 DSP,
 //           无 DDR3 控制器。
-// 注意    : 1. 需用户例化 PLL IP(名 pll, 端口 pll_rst/clkin1/
-//              pll_lock/clkout0/clkout1): 输入 50MHz, 输出
-//              clkout0 = 210MHz = 5*像素时钟(5*42MHz, TMDS 5x 串行
-//              时钟), clkout1 本版未使用。像素时钟为 cam_pclk/2
-//              (与摄像头同源), 210MHz 与之非同源, 串行器逐像素
-//              重同步可容忍轻微相位漂移。
-//           2. 像素时钟为 fabric 分频时钟(cam_pclk/2), 上板时若
-//              时序收敛困难, 请改用 PLL 输出 0.5x/2.5x 组合;
-//           3. 摄像头默认配置 1280x720 RGB565@30(HTS=1650,VTS=845,
-//              pclk≈84MHz), 与 hdmi_timing_direct 时序一致;
-//           4. 板上摄像头 XCLK 由底板提供, 本工程不输出。
+// 注意    : PLL IP 名 PLL, 输入 cam_pclk, clkout0=cam_pclk/2,
+//           clkout1=cam_pclk*2.5, 两输出须同源且满足串行器时序约束。
+//           典型输入84MHz时, 输出42MHz/210MHz。禁止用独立sys_clk
+//           生成串行时钟。像素经小型异步FIFO跨入PLL像素时钟域。
+//           H_TOTAL 为摄像头完整行周期, 单位为RGB565像素周期。
 //=====================================================================
 module video_stab_hdmi #(
     // ---- 摄像头/算法分辨率 ----
@@ -48,6 +42,7 @@ module video_stab_hdmi #(
     parameter TILE_RAM_DEPTH = 4096, // 单块图 RAM 深度
     parameter RING_DEPTH = 32768,  // 平移补偿环形缓冲深度(2 的幂)
     // ---- HDMI 同步脉宽(数据派生) ----
+    parameter H_TOTAL   = 1650,    // Complete camera line in pixel clocks
     parameter H_SYNC    = 40,      // 行同步脉宽(像素时钟拍)
     parameter V_SYNC    = 5        // 场同步脉宽(行)
 )(
@@ -105,21 +100,21 @@ module video_stab_hdmi #(
     wire [15:0] px_data_o;
 
     // 像素时钟与跨域
-    wire        pixel_clk;     // = cam_pclk/2(约 42MHz)
-    reg  [15:0] pix_data;      // pixel_clk 域像素(RGB565)
-    reg         pix_valid;     // pixel_clk 域像素有效
-    reg         line_end;      // pixel_clk 域行末
-    reg         frame_end;     // pixel_clk 域帧末
+    wire        pixel_clk;     // PLL output = cam_pclk/2 (typically 42MHz)
+    wire [15:0] pix_data;      // pixel_clk 域像素(RGB565)
+    wire        pix_valid;     // pixel_clk 域像素有效
+    wire        line_end;      // pixel_clk 域行末
+    wire        frame_end;     // pixel_clk 域帧末
 
     //=================================================================
-    // 1. PLL(用户 IP: 输入 50MHz, 输出 5x 像素时钟约 210MHz)
+    // 1. PLL: cam_pclk input; coherent 0.5x pixel and 2.5x serial outputs
     //=================================================================
-    pll u_pll (
-        .pll_rst  (~sys_rst_n),
-        .clkin1   (sys_clk),
-        .pll_lock (pll_lock),
-        .clkout0  (clk_hdmi_5x),   // 210MHz = 5x 像素时钟(TMDS 5x 串行)
-        .clkout1  ()               // 本版未使用
+    PLL u_pll (
+        .rst      (~sys_rst_n),
+        .clkin1   (cam_pclk),
+        .lock     (pll_lock),
+        .clkout0  (pixel_clk),     // cam_pclk / 2
+        .clkout1  (clk_hdmi_5x)    // cam_pclk * 2.5
     );
 
     //=================================================================
@@ -240,40 +235,26 @@ module video_stab_hdmi #(
     assign dbg_comp_x     = comp_x;
     assign dbg_comp_y     = comp_y;
 
-    //=================================================================
-    // 6. 像素时钟生成: cam_pclk 二分频, 与像素有效 px_de 相位对齐
-    //    注意: 上板综合时建议为分频时钟插入全局时钟缓冲(BUFG),
-    //    或改用 PLL 输出 0.5x 像素时钟以改善时序。
-    //=================================================================
-    reg pixel_clk_r;
-    always @(posedge cam_pclk or negedge sys_rst_n) begin
-        if (!sys_rst_n)
-            pixel_clk_r <= 1'b0;
-        else if (px_de)
-            pixel_clk_r <= 1'b1;     // 像素有效拍置 1, 使上升沿对齐像素
-        else
-            pixel_clk_r <= ~pixel_clk_r;
-    end
-    assign pixel_clk = pixel_clk_r;
+    // Reset assertion is asynchronous; release is synchronized per domain.
+    reg [1:0] cam_ready, pix_ready;
+    wire stream_reset_n = sys_rst_n & pll_lock;
+    always @(posedge cam_pclk or negedge stream_reset_n)
+        if (!stream_reset_n) cam_ready <= 2'b00;
+        else cam_ready <= {cam_ready[0], 1'b1};
+    always @(posedge pixel_clk or negedge stream_reset_n)
+        if (!stream_reset_n) pix_ready <= 2'b00;
+        else pix_ready <= {pix_ready[0], 1'b1};
 
-    //=================================================================
-    // 7. 跨域: 平移补偿输出(cam_pclk 域) -> 像素时钟域
-    //    pixel_clk 上升沿与 px_de_o/px_eol_o/px_eof_o 相位对齐,
-    //    各信号在像素时钟上升沿稳定, 直接寄存即可。
-    //=================================================================
-    always @(posedge pixel_clk or negedge sys_rst_n) begin
-        if (!sys_rst_n) begin
-            pix_data  <= 16'd0;
-            pix_valid <= 1'b0;
-            line_end  <= 1'b0;
-            frame_end <= 1'b0;
-        end else begin
-            pix_data  <= px_data_o;
-            pix_valid <= px_de_o;
-            line_end  <= px_eol_o;
-            frame_end <= px_eof_o;
-        end
-    end
+    // A complete pixel and its line/frame flags cross together. The FIFO
+    // absorbs PLL phase and pointer synchronizer latency without a fabric clock.
+    pixel_stream_cdc u_pixel_cdc (
+        .wr_clk(cam_pclk), .wr_rst_n(cam_ready[1]),
+        .wr_valid(px_de_o), .wr_data(px_data_o),
+        .wr_eol(px_eol_o), .wr_eof(px_eof_o),
+        .rd_clk(pixel_clk), .rd_rst_n(pix_ready[1]),
+        .rd_valid(pix_valid), .rd_data(pix_data),
+        .rd_eol(line_end), .rd_eof(frame_end)
+    );
 
     //=================================================================
     // 8. HDMI 直出时序发生器(数据派生, 与摄像头锁相)
@@ -282,11 +263,12 @@ module video_stab_hdmi #(
     wire [23:0] video_rgb;
 
     hdmi_timing_direct #(
+        .H_TOTAL(H_TOTAL),
         .H_SYNC (H_SYNC),
         .V_SYNC (V_SYNC)
     ) u_hdmi_tg (
         .pix_clk    (pixel_clk),
-        .rst_n      (sys_rst_n),
+        .rst_n      (pix_ready[1]),
         .pix_data   (pix_data),
         .pix_valid  (pix_valid),
         .line_end   (line_end),

@@ -21,15 +21,15 @@
 //   存 DDR3, LCD 1:1 显示。
 //   按 KEY 在 HDMI/LCD 间切换, LED 指示当前模式。
 //
-// 平台    : 紫光同创 Logos-2 PGL22G6CMBG324 (PGL22G 开发板)
-// 时钟    : sys_clk 50MHz(晶振 V9); PLL 输出 74.25MHz/371.25MHz
+// 平台    : 正点原子达芬奇 Pro Logos2 (PG2L200H-6IFBB484)
+// 时钟    : sys_clk 50MHz(晶振 R4); PLL 输出 74.25MHz/371.25MHz
 // 资源    : 约 45 个 18Kb 块 RAM + 少量逻辑, 0 DSP(详见 使用说明.md)
-// 注意    : 1. 需用户例化 PLL IP(名 pll, 端口 pll_rst/clkin1/
-//              pll_lock/clkout0/clkout1): 输入 50MHz, 输出
+// 注意    : 1. 需用户例化 PLL IP(名 PLL, 端口 rst/clkin1/
+//              lock/clkout0/clkout1): 输入 50MHz, 输出
 //              clkout0=74.25MHz, clkout1=371.25MHz;
 //           2. 需 DDR3 IP(名 ddr3_ip)与 wr_fifo/rd_fifo IP,
 //              与正点原子 ov5640_lcd 例程相同;
-//           3. 板上摄像头 XCLK 由底板提供, 本工程不输出;
+//           3. 使用带本地晶振的传统 OV5640 模块, 本工程不输出;
 //           4. 摄像头默认配置为 1280x720 RGB565, 帧率约 30fps
 //              (HTS=1650, VTS=845, 由 i2c_ov5640_rgb565_cfg 配置)。
 //=====================================================================
@@ -49,20 +49,20 @@ module video_stab_sys #(
     parameter KEY_POL   = 1'b0     // 按键按下电平(0=低有效)
 )(
     // ---- 系统 ----
-    input  wire        sys_clk,     // 50MHz, 引脚 V9
-    input  wire        sys_rst_n,   // 系统复位, 引脚 C4, 低有效
+    input  wire        sys_clk,     // 50MHz, 引脚 R4
+    input  wire        sys_rst_n,   // 系统复位, 引脚 U7, 低有效
     input  wire        key_mode,    // 模式切换按键(低有效)
     output wire        led_mode,    // 模式指示(0=HDMI, 1=LCD)
 
     // ---- 摄像头(OV5640) ----
-    input  wire        cam_pclk,    // 引脚 L1
-    input  wire        cam_vsync,   // 引脚 P4
-    input  wire        cam_href,    // 引脚 M5
-    input  wire [7:0]  cam_data,    // 引脚 N1/P2/T2/P1/T1/U2/M3/U1
-    output wire        cam_rst_n,   // 引脚 M1
-    output wire        cam_pwdn,    // 引脚 L2
-    output wire        cam_scl,     // 引脚 P3
-    inout  wire        cam_sda,     // 引脚 L6
+    input  wire        cam_pclk,    // 引脚 U18
+    input  wire        cam_vsync,   // 引脚 P14
+    input  wire        cam_href,    // 引脚 N14
+    input  wire [7:0]  cam_data,    // 引脚 P17/P15/R16/R17/P16/V17/W17/U17
+    output wire        cam_rst_n,   // 引脚 N17
+    output wire        cam_pwdn,    // 引脚 AB18
+    output wire        cam_scl,     // 引脚 N13
+    inout  wire        cam_sda,     // 引脚 R14
 
     // ---- DDR3 ----
     output wire        mem_rst_n,
@@ -91,10 +91,10 @@ module video_stab_sys #(
     output wire        lcd_pclk,
 
     // ---- HDMI(TMDS, 4 对 LVDS) ----
-    output wire        tmds_clk_p,   // HDMI_CLK_P B16
-    output wire        tmds_clk_n,   // HDMI_CLK_N A16
-    output wire [2:0]  tmds_data_p,  // D2 B10, D1 B11, D0 B14
-    output wire [2:0]  tmds_data_n,  // D2 A10, D1 A11, D0 A14
+    output wire        tmds_clk_p,   // HDMI_B CLK_P J20
+    output wire        tmds_clk_n,   // HDMI_B CLK_N J21
+    output wire [2:0]  tmds_data_p,  // D2 H20, D1 K21, D0 J22
+    output wire [2:0]  tmds_data_n,  // D2 G20, D1 K22, D0 H22
 
     // ---- 调试观测(可选, 不接即可) ----
     output wire        dbg_motion_valid, // 每帧运动估计完成脉冲
@@ -180,10 +180,10 @@ module video_stab_sys #(
     //=================================================================
     // 1. PLL(用户 IP: 输入 50MHz, 输出 74.25MHz + 371.25MHz)
     //=================================================================
-    pll u_pll (
-        .pll_rst  (~sys_rst_n),
+    PLL u_pll (
+        .rst      (~sys_rst_n),
         .clkin1   (sys_clk),
-        .pll_lock (pll_lock),
+        .lock     (pll_lock),
         .clkout0  (clk_hdmi_pix),  // DDR3 版: 74.25MHz(需重配 PLL)
         .clkout1  (clk_hdmi_5x)    // DDR3 版: 371.25MHz(需重配 PLL)
     );

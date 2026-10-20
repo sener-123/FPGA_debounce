@@ -1,0 +1,120 @@
+# Board: ALIENTEK Davinci Pro Logos2
+# FPGA: PG2L200H-6IFBB484; PDS device PG2L200H, speed -6, package FBB484.
+# Top: davinci_hdmi_top; physical pins: 25.
+# Source: board manual V1.0 pp.84-90, 677, 1156-1158.
+# Load ONLY this pin file for this top, plus davinci_clocks.sdc and IP timing.
+# Do not also load debounce.fdc or the other davinci pin file.
+# Locations are FPGA package balls, NOT connector pin numbers.
+# Debug ports stay internal. CAMERA_SGM changes AB18 function, not location.
+
+# --- System clock / reset ---
+define_attribute {p:sys_clk} {PAP_IO_DIRECTION} {INPUT}
+define_attribute {p:sys_clk} {PAP_IO_LOC} {R4}
+define_attribute {p:sys_clk} {PAP_IO_VCCIO} {1.5}
+define_attribute {p:sys_clk} {PAP_IO_STANDARD} {LVCMOS15}
+define_attribute {p:sys_rst_n} {PAP_IO_DIRECTION} {INPUT}
+define_attribute {p:sys_rst_n} {PAP_IO_LOC} {U7}
+define_attribute {p:sys_rst_n} {PAP_IO_VCCIO} {1.5}
+define_attribute {p:sys_rst_n} {PAP_IO_STANDARD} {LVCMOS15}
+
+# --- OV5640 CMOS camera ---
+define_attribute {p:cam_pclk} {PAP_IO_DIRECTION} {INPUT}
+define_attribute {p:cam_pclk} {PAP_IO_LOC} {U18}
+define_attribute {p:cam_pclk} {PAP_IO_VCCIO} {3.3}
+define_attribute {p:cam_pclk} {PAP_IO_STANDARD} {LVCMOS33}
+define_attribute {p:cam_vsync} {PAP_IO_DIRECTION} {INPUT}
+define_attribute {p:cam_vsync} {PAP_IO_LOC} {P14}
+define_attribute {p:cam_vsync} {PAP_IO_VCCIO} {3.3}
+define_attribute {p:cam_vsync} {PAP_IO_STANDARD} {LVCMOS33}
+define_attribute {p:cam_href} {PAP_IO_DIRECTION} {INPUT}
+define_attribute {p:cam_href} {PAP_IO_LOC} {N14}
+define_attribute {p:cam_href} {PAP_IO_VCCIO} {3.3}
+define_attribute {p:cam_href} {PAP_IO_STANDARD} {LVCMOS33}
+define_attribute {p:cam_data[0]} {PAP_IO_DIRECTION} {INPUT}
+define_attribute {p:cam_data[0]} {PAP_IO_LOC} {P17}
+define_attribute {p:cam_data[0]} {PAP_IO_VCCIO} {3.3}
+define_attribute {p:cam_data[0]} {PAP_IO_STANDARD} {LVCMOS33}
+define_attribute {p:cam_data[1]} {PAP_IO_DIRECTION} {INPUT}
+define_attribute {p:cam_data[1]} {PAP_IO_LOC} {P15}
+define_attribute {p:cam_data[1]} {PAP_IO_VCCIO} {3.3}
+define_attribute {p:cam_data[1]} {PAP_IO_STANDARD} {LVCMOS33}
+define_attribute {p:cam_data[2]} {PAP_IO_DIRECTION} {INPUT}
+define_attribute {p:cam_data[2]} {PAP_IO_LOC} {R16}
+define_attribute {p:cam_data[2]} {PAP_IO_VCCIO} {3.3}
+define_attribute {p:cam_data[2]} {PAP_IO_STANDARD} {LVCMOS33}
+define_attribute {p:cam_data[3]} {PAP_IO_DIRECTION} {INPUT}
+define_attribute {p:cam_data[3]} {PAP_IO_LOC} {R17}
+define_attribute {p:cam_data[3]} {PAP_IO_VCCIO} {3.3}
+define_attribute {p:cam_data[3]} {PAP_IO_STANDARD} {LVCMOS33}
+define_attribute {p:cam_data[4]} {PAP_IO_DIRECTION} {INPUT}
+define_attribute {p:cam_data[4]} {PAP_IO_LOC} {P16}
+define_attribute {p:cam_data[4]} {PAP_IO_VCCIO} {3.3}
+define_attribute {p:cam_data[4]} {PAP_IO_STANDARD} {LVCMOS33}
+define_attribute {p:cam_data[5]} {PAP_IO_DIRECTION} {INPUT}
+define_attribute {p:cam_data[5]} {PAP_IO_LOC} {V17}
+define_attribute {p:cam_data[5]} {PAP_IO_VCCIO} {3.3}
+define_attribute {p:cam_data[5]} {PAP_IO_STANDARD} {LVCMOS33}
+define_attribute {p:cam_data[6]} {PAP_IO_DIRECTION} {INPUT}
+define_attribute {p:cam_data[6]} {PAP_IO_LOC} {W17}
+define_attribute {p:cam_data[6]} {PAP_IO_VCCIO} {3.3}
+define_attribute {p:cam_data[6]} {PAP_IO_STANDARD} {LVCMOS33}
+define_attribute {p:cam_data[7]} {PAP_IO_DIRECTION} {INPUT}
+define_attribute {p:cam_data[7]} {PAP_IO_LOC} {U17}
+define_attribute {p:cam_data[7]} {PAP_IO_VCCIO} {3.3}
+define_attribute {p:cam_data[7]} {PAP_IO_STANDARD} {LVCMOS33}
+define_attribute {p:cam_rst_n} {PAP_IO_DIRECTION} {OUTPUT}
+define_attribute {p:cam_rst_n} {PAP_IO_LOC} {N17}
+define_attribute {p:cam_rst_n} {PAP_IO_VCCIO} {3.3}
+define_attribute {p:cam_rst_n} {PAP_IO_STANDARD} {LVCMOS33}
+define_attribute {p:cam_pwdn} {PAP_IO_DIRECTION} {OUTPUT}
+define_attribute {p:cam_pwdn} {PAP_IO_LOC} {AB18}
+define_attribute {p:cam_pwdn} {PAP_IO_VCCIO} {3.3}
+define_attribute {p:cam_pwdn} {PAP_IO_STANDARD} {LVCMOS33}
+define_attribute {p:cam_scl} {PAP_IO_DIRECTION} {OUTPUT}
+define_attribute {p:cam_scl} {PAP_IO_LOC} {N13}
+define_attribute {p:cam_scl} {PAP_IO_VCCIO} {3.3}
+define_attribute {p:cam_scl} {PAP_IO_STANDARD} {LVCMOS33}
+define_attribute {p:cam_sda} {PAP_IO_DIRECTION} {INOUT}
+define_attribute {p:cam_sda} {PAP_IO_LOC} {R14}
+define_attribute {p:cam_sda} {PAP_IO_VCCIO} {3.3}
+define_attribute {p:cam_sda} {PAP_IO_STANDARD} {LVCMOS33}
+
+# --- HDMI_B TMDS output ---
+define_attribute {p:tmds_clk_p} {PAP_IO_DIRECTION} {OUTPUT}
+define_attribute {p:tmds_clk_p} {PAP_IO_LOC} {J20}
+define_attribute {p:tmds_clk_p} {PAP_IO_VCCIO} {3.3}
+define_attribute {p:tmds_clk_p} {PAP_IO_STANDARD} {TMDS}
+define_attribute {p:tmds_clk_n} {PAP_IO_DIRECTION} {OUTPUT}
+define_attribute {p:tmds_clk_n} {PAP_IO_LOC} {J21}
+define_attribute {p:tmds_clk_n} {PAP_IO_VCCIO} {3.3}
+define_attribute {p:tmds_clk_n} {PAP_IO_STANDARD} {TMDS}
+define_attribute {p:tmds_data_p[0]} {PAP_IO_DIRECTION} {OUTPUT}
+define_attribute {p:tmds_data_p[0]} {PAP_IO_LOC} {J22}
+define_attribute {p:tmds_data_p[0]} {PAP_IO_VCCIO} {3.3}
+define_attribute {p:tmds_data_p[0]} {PAP_IO_STANDARD} {TMDS}
+define_attribute {p:tmds_data_p[1]} {PAP_IO_DIRECTION} {OUTPUT}
+define_attribute {p:tmds_data_p[1]} {PAP_IO_LOC} {K21}
+define_attribute {p:tmds_data_p[1]} {PAP_IO_VCCIO} {3.3}
+define_attribute {p:tmds_data_p[1]} {PAP_IO_STANDARD} {TMDS}
+define_attribute {p:tmds_data_p[2]} {PAP_IO_DIRECTION} {OUTPUT}
+define_attribute {p:tmds_data_p[2]} {PAP_IO_LOC} {H20}
+define_attribute {p:tmds_data_p[2]} {PAP_IO_VCCIO} {3.3}
+define_attribute {p:tmds_data_p[2]} {PAP_IO_STANDARD} {TMDS}
+define_attribute {p:tmds_data_n[0]} {PAP_IO_DIRECTION} {OUTPUT}
+define_attribute {p:tmds_data_n[0]} {PAP_IO_LOC} {H22}
+define_attribute {p:tmds_data_n[0]} {PAP_IO_VCCIO} {3.3}
+define_attribute {p:tmds_data_n[0]} {PAP_IO_STANDARD} {TMDS}
+define_attribute {p:tmds_data_n[1]} {PAP_IO_DIRECTION} {OUTPUT}
+define_attribute {p:tmds_data_n[1]} {PAP_IO_LOC} {K22}
+define_attribute {p:tmds_data_n[1]} {PAP_IO_VCCIO} {3.3}
+define_attribute {p:tmds_data_n[1]} {PAP_IO_STANDARD} {TMDS}
+define_attribute {p:tmds_data_n[2]} {PAP_IO_DIRECTION} {OUTPUT}
+define_attribute {p:tmds_data_n[2]} {PAP_IO_LOC} {G20}
+define_attribute {p:tmds_data_n[2]} {PAP_IO_VCCIO} {3.3}
+define_attribute {p:tmds_data_n[2]} {PAP_IO_STANDARD} {TMDS}
+
+# Camera PCLK is fixed by the PCB at U18, a shared IO rather than the
+# dedicated clock-source placement expected by PDS (Place-0084).
+# Permit the IO-to-clock-network connection through general routing.
+# Keep downstream global clock buffering; inspect routed timing/skew.
+define_attribute {n:cam_pclk} {PAP_CLOCK_DEDICATED_ROUTE} {FALSE}

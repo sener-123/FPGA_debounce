@@ -18,12 +18,12 @@
 //               |  标准显示时序 hsync/vsync/de/RGB888
 //           显示器驱动(HDMI 等)
 //
-// 平台    : 紫光同创 Logos-2 PGL22G6CMBG324 (PGL22G 开发板)
+// 平台    : 正点原子达芬奇 Pro Logos2 (PG2L200H-6IFBB484)
 // 时钟    : 全部逻辑工作于摄像头像素时钟 cam_pclk, 不使用板上 50MHz
 // 资源    : 约 24 个 18Kb 块 RAM + 少量逻辑, 不使用 DSP(详见 使用说明.md)
 // 注意    : 1. OV5640 的 SCCB/I2C 寄存器配置由外部摄像头驱动完成
 //              (本工程不包含), 摄像头需配置为 RGB565 输出;
-//           2. 板上摄像头 RESET/PWDN 引脚未接出, 无需控制;
+//           2. 此演示顶层未导出 RESET/PWDN, 上板请使用 davinci_*_top;
 //           3. 摄像头输出帧率必须与 video_out_if 的显示时序总周期一致。
 //=====================================================================
 module video_stab_top #(
@@ -53,7 +53,7 @@ module video_stab_top #(
     // 每像素占用的 px_clk 周期数: OV5640 RGB565 为双字节输出(2 拍/像素)
     parameter PX_CLK_PER_PIX = 2
 )(
-    // ---- 摄像头并行视频总线(PGL22G 开发板 OV5640 引脚) ----
+    // ---- 摄像头并行视频总线(达芬奇 Pro Logos2 OV5640 接口) ----
     input  wire        cam_pclk,     // CMOS_PCLK  J17
     input  wire        cam_vsync,    // CMOS_VSYNC J18
     input  wire        cam_href,     // CMOS_HREF  H14

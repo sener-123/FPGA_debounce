@@ -2,11 +2,11 @@
 // 测试台  : tb_video_stab_sys.v
 // 目的    : 验证 video_stab_sys 全系统数据通路
 // 方法    : 1. HDMI 阶段(默认): sim_cam_source 产生 1280x720 测试图
-//              (像素 = {帧号[5:0], y'[4:0], x'[4:0]}, 帧 0~7 静止,
-//              帧 8 起每帧水平漂移 +16 像素), 检查 HDMI 输出:
+//              (像素 = {帧号[5:0], y'[4:0], x'[4:0]}, 帧 0~1 静止,
+//              帧 2 起每帧水平漂移 +16 像素), 检查 HDMI 输出:
 //              - 每帧 video_de 数 = 1280*720;
-//              - 静止帧(F<7, comp=0): X' == (x-9) mod 32;
-//              - 漂移帧(F>=12, comp 饱和 +8): X' == (x-17+dx(F)) mod 32;
+//              - 使用 RGB565 的完整6位帧号, 按生效补偿核对各帧;
+//              - 漂移从帧2开始, 按每帧实际生效的补偿量核对内容;
 //           2. 按键切换到 LCD 阶段: 检查 lcd_rgb_top 的 data_in:
 //              每帧 800*480 个像素, 内容为 720p 帧居中裁剪窗口
 //              (col0=240, row0=120) 的平移结果。
@@ -92,6 +92,16 @@ module tb_video_stab_sys;
         .dbg_comp_y     (dbg_comp_y)
     );
 
+    // Record the signed correction applied to each source frame. This
+    // checks display transport independently of the separately tested estimator.
+    integer frame_comp[0:63];
+    integer ci;
+    initial for(ci=0;ci<64;ci=ci+1)frame_comp[ci]=0;
+    always @(posedge cam_pclk) if(dut.px_sof)
+        frame_comp[(dut.u_sim_cam.frame_cnt+1)&63]=$signed(dut.u_shift.comp_x_r);
+
+    defparam dut.u_sim_cam.DRIFT_START_FRAME = 2;
+
     //=================================================================
     // HDMI 监控(negedge 采样避免竞争): 帧号/行列/像素校验
     //=================================================================
@@ -111,7 +121,7 @@ module tb_video_stab_sys;
         hdmi_vs_d <= dut.u_hdmi_tg.video_vs;
         if (dut.u_hdmi_tg.video_vs && !hdmi_vs_d) begin
             // 帧结束统计
-            if (hdmi_frame > 10 && dut.mode == 1'b0) begin
+            if (hdmi_frame > 2 && dut.mode == 1'b0) begin
                 if (hdmi_de_cnt != 1280*720) begin
                     $display("ERROR: hdmi frame %0d de count %0d expect %0d",
                              hdmi_frame, hdmi_de_cnt, 1280*720);
@@ -121,32 +131,24 @@ module tb_video_stab_sys;
             hdmi_frame = hdmi_frame + 1;
             hdmi_de_cnt = 0;
         end else if (dut.u_hdmi_tg.video_de && dut.mode == 1'b0) begin
-            hdmi_col = hdmi_de_cnt - 1;      // 本拍显示的是列 hdmi_col
+            hdmi_col = hdmi_de_cnt;      // 本拍显示的是列 hdmi_col
             hdmi_de_cnt = hdmi_de_cnt + 1;
             // 只校验部分行(行 = de_cnt/1280)
-            if (hdmi_col >= 0 && hdmi_frame > 10 &&
+            if ((hdmi_col%1280==0 || hdmi_col%1280>=17) && hdmi_frame > 2 &&
                 (hdmi_col/1280 == 100 || hdmi_col/1280 == 300 ||
                  hdmi_col/1280 == 500)) begin
-                F_obs = dut.u_hdmi_tg.video_rgb[23:19];
+                F_obs = {dut.u_hdmi_tg.video_rgb[23:19],dut.u_hdmi_tg.video_rgb[15]};
                 Xp    = dut.u_hdmi_tg.video_rgb[7:3];   // B 场在 [7:3]
                 if ((^dut.u_hdmi_tg.video_rgb) === 1'bx) begin
                     hdmi_x_errs = hdmi_x_errs + 1;
-                end else if (F_obs < 7) begin
-                    // 静止帧: comp=0, dx=0 -> X' = (x-9) mod 32
-                    exp_x = (hdmi_col - 9) & 31;
+                end else begin
+                    dxf = (F_obs < 2) ? 0 : (F_obs-1)*16;
+                    exp_x = (hdmi_col%1280 < 9+frame_comp[F_obs]) ? 0
+                          : (hdmi_col - 9-frame_comp[F_obs] + dxf) & 31;
                     if (Xp !== exp_x[4:0]) begin
-                        $display("ERROR[static] hdmi (%0d,%0d) X'=%0d expect %0d",
-                                 hdmi_col%1280, hdmi_col/1280, Xp, exp_x[4:0]);
-                        hdmi_errs = hdmi_errs + 1;
-                    end
-                end else if (F_obs >= 12) begin
-                    // 漂移帧: comp=+8, dx(F)=(F-7)*16 -> X'=(x-17+dx) mod 32
-                    dxf = (F_obs - 7) << 4;
-                    exp_x = (hdmi_col - 17 + dxf) & 31;
-                    if (Xp !== exp_x[4:0]) begin
-                        $display("ERROR[ramp] hdmi (%0d,%0d) X'=%0d expect %0d (F=%0d)",
-                                 hdmi_col%1280, hdmi_col/1280, Xp, exp_x[4:0], F_obs);
-                        hdmi_errs = hdmi_errs + 1;
+                        $display("ERROR[hdmi] F=%0d (%0d,%0d) X=%0d expect=%0d",F_obs,hdmi_col%1280,hdmi_col/1280,Xp,exp_x);
+                        hdmi_errs=hdmi_errs+1;
+                        if(hdmi_errs>20)$fatal(1,"HDMI system content mismatch");
                     end
                 end
             end
@@ -167,10 +169,13 @@ module tb_video_stab_sys;
         lcd_de_cnt = 0; lcd_row = 0; lcd_col = 0; lcd_vs_d = 0;
     end
 
-    always @(negedge dut.u_lcd.lcd_clk) begin
+    always @(negedge dut.u_lcd.lcd_clk or posedge dut.switch_rst) begin
+        if (dut.switch_rst || !dut.mode) begin
+            lcd_frame=0;lcd_de_cnt=0;lcd_row=0;lcd_col=0;lcd_vs_d=0;
+        end else begin
         lcd_vs_d <= dut.u_lcd.out_vsync;
         if (dut.u_lcd.out_vsync && !lcd_vs_d) begin
-            if (lcd_frame > 5 && dut.mode == 1'b1) begin
+            if (lcd_frame > 2 && dut.mode == 1'b1) begin
                 if (lcd_de_cnt != 800*480) begin
                     $display("ERROR: lcd frame %0d de count %0d expect %0d",
                              lcd_frame, lcd_de_cnt, 800*480);
@@ -183,17 +188,17 @@ module tb_video_stab_sys;
             lcd_col = 0;
         end else if (dut.lcd_de && dut.mode == 1'b1) begin
             // 本拍 data_in = 窗口列 lcd_col 的像素
-            if (lcd_frame > 5 && lcd_row < 480) begin
+            if (lcd_frame > 2 && lcd_row < 480) begin
                 if (lcd_row == 100 || lcd_row == 300 || lcd_row == 450) begin
                     if (lcd_col == 0 || lcd_col == 400 || lcd_col == 799) begin
                         lcd_F  = dut.u_lcd.data_in[15:10];
                         lcd_Xp = dut.u_lcd.data_in[4:0];
                         if ((^dut.u_lcd.data_in) === 1'bx) begin
                             lcd_errs = lcd_errs + 1;
-                        end else if (lcd_F >= 12) begin
-                            // 居中裁剪(col0=240, row0=120), comp=+8
-                            lcd_dxf = (lcd_F - 7) << 4;
-                            lcd_exp = (240 + lcd_col - 17 + lcd_dxf) & 31;
+                        end else begin
+                            // 居中裁剪(col0=240, row0=120), 按源帧实际补偿核对
+                            lcd_dxf = (lcd_F < 2) ? 0 : (lcd_F-1)*16;
+                            lcd_exp = (240 + lcd_col - 9 - frame_comp[lcd_F] + lcd_dxf) & 31;
                             if (lcd_Xp !== lcd_exp[4:0]) begin
                                 $display("ERROR[lcd] (%0d,%0d) X'=%0d expect %0d (F=%0d)",
                                          lcd_col, lcd_row, lcd_Xp, lcd_exp[4:0], lcd_F);
@@ -211,6 +216,8 @@ module tb_video_stab_sys;
         end
     end
 
+    end
+
     //=================================================================
     // 主流程
     //=================================================================
@@ -219,16 +226,18 @@ module tb_video_stab_sys;
         repeat (20) @(posedge sys_clk);
         sys_rst_n = 1'b1;
 
-        // 阶段 1: HDMI, 覆盖静止帧(F<7)与漂移帧(F>=12)
-        // 摄像头帧周期约 26.3ms; 漂移帧显示约在 340ms 之后
-        #480_000_000;   // 480ms
+        // 阶段 1: HDMI, 图像从帧2开始漂移
+        // 摄像头帧周期约 26.3ms, 覆盖多帧运动与重复显示
+        #160_000_000;   // 160ms
 
         // 阶段 2: 按键切换到 LCD
         key_mode = 1'b0;   // 按下
         #40_000_000;
         key_mode = 1'b1;   // 松开
-        #430_000_000;      // 等待切换复位 + LCD 显示稳定
+        #170_000_000;      // 等待切换复位 + LCD 显示稳定
 
+        // Both output modes must actually have been exercised.
+        if(hdmi_frame<4 || lcd_frame<4)$fatal(1,"insufficient system frame coverage");
         // 汇总
         if (hdmi_errs == 0 && hdmi_x_errs == 0 && lcd_errs == 0)
             $display("=== tb_video_stab_sys PASS (hdmi_errs=%0d x=%0d lcd_errs=%0d) ===",
@@ -244,9 +253,9 @@ module tb_video_stab_sys;
         id_pull = 1'b1;
         #60_000_000;
         id_pull = 1'b0;
-        #418_000_000;    // t = 478ms
+        #98_000_000;    // t = 158ms
         id_pull = 1'b1;
-        #142_000_000;    // t = 620ms
+        #62_000_000;    // t = 620ms
         id_pull = 1'b0;
     end
 

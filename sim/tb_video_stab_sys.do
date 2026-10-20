@@ -30,7 +30,7 @@ vlog -work work ../rtl/lcd_rgb_top/lcd_driver.v
 vlog -work work ../rtl/lcd_rgb_top/lcd_rgb_top.v
 
 # ---- 仿真模型 ----
-vlog -work work pll_clk_sim.v
+vlog +define+SIM_FAST -work work pll_clk_sim.v
 vlog -work work ddr3_frame_buf_model.v
 vlog -work work oddrx1_model.v
 vlog -work work elvds_obuf_model.v

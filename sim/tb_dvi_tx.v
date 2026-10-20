@@ -78,6 +78,18 @@ module tb_dvi_tx;
         .tmds_data_n (tmds_data_n)
     );
 
+    integer pixel_edges = 0, clock_edges = 0, stable_pixel_edges = 0;
+    always @(posedge pclk) if (rst_n) begin
+        pixel_edges = pixel_edges + 1;
+        if (pixel_edges > 3) stable_pixel_edges = stable_pixel_edges + 1;
+    end
+    always @(negedge tmds_clk_p) if (rst_n && pixel_edges > 3) clock_edges = clock_edges + 1;
+    always @(negedge clk5) begin
+        #0.001;
+        if (rst_n && pixel_edges > 2 && (tmds_clk_p !== ~pclk || tmds_clk_n !== pclk))
+            $fatal(1, "TMDS forwarded clock must have pixel frequency");
+    end
+
     //-----------------------------------------------------------------
     // 参考编码器(独立实现, 3 级流水与 dvi_encoder 一致)
     //-----------------------------------------------------------------
@@ -115,25 +127,26 @@ module tb_dvi_tx;
     end
 
     //-----------------------------------------------------------------
-    // 检查 2: 串行化器位序验证(通道 0)
-    // 方法: 每个 pclk_x5 下降沿采样 (d0,d1) 对, 连续 2000 对(4000 位);
-    //           按物理时间顺序存入 pair_bits(索引 0 为最早一位, 每对内
-    //           d0 在前 d1 在后, 与 ODDRX1 实际输出一致); 同时记录
-    //           char_s 全历史; 结束仿真后寻找相位偏移与滞后, 使位流
-    //           与 "char_s 低位先发" 完全一致。串行器逻辑(cnt5 选择 +
-    //           d0/d1 寄存器)由此得到完整验证; ODDRX1 差分输出由器件
-    //           原语保证(按数据手册行为)。
+    // Check 2: sample the real differential data pins on both serial edges.
+    // Compare the resulting 4000-bit stream with the pixel character history.
     //-----------------------------------------------------------------
     reg [3999:0] pair_bits = 4000'd0;
     integer      pair_cnt = 0;
     reg [9:0]    ch_all [0:1023];    // char_s 全历史(1024 个像素周期)
     integer      ch_wr = 0;
 
-    always @(negedge clk5) begin
-        if (pair_cnt < 2000) begin
-            // 右移 2 位, 新 (d0,d1) 对从高位进入; 索引 0 恒为最早位。
-            pair_bits = {dut.u_ser0.d1, dut.u_ser0.d0, pair_bits[3999:2]};
-            pair_cnt  = pair_cnt + 1;
+    // Observe actual differential output pins after model NBA updates.
+    // Start on a rising edge so each 10-bit word remains LSB-first.
+    integer serial_bits = 0;
+    reg serial_started = 0;
+    always @(posedge clk5 or negedge clk5) begin
+        #0.001;
+        if (clk5) serial_started = 1;
+        if (serial_started && serial_bits < 4000) begin
+            pair_bits[serial_bits] = tmds_data_p[0];
+            if (tmds_data_n[0] !== ~tmds_data_p[0])
+                $fatal(1, "TMDS differential polarity mismatch");
+            serial_bits = serial_bits + 1;
         end
     end
 
@@ -168,7 +181,7 @@ module tb_dvi_tx;
                     $display("DBG pair[%0d]=%b", i, pair_bits[i]);
                 ser_errs = 1;
             end else begin
-                $display("SERIAL OK: serializer pairs match char_s (10b LSB-first)");
+                $display("SERIAL OK: TMDS pins match character history (10b LSB-first)");
             end
         end
     endtask
@@ -178,9 +191,12 @@ module tb_dvi_tx;
     //-----------------------------------------------------------------
     initial begin
         repeat (10) @(posedge pclk);
-        rst_n = 1'b1;
+        @(negedge pclk);
+        #1 rst_n = 1'b1;
         #40000;                              // 400 个像素周期
         check_serial;
+        if (pixel_edges < 100 || clock_edges < stable_pixel_edges-1 || clock_edges > stable_pixel_edges+1)
+            $fatal(1, "TMDS clock edge count mismatch");
         if (errs == 0 && ser_errs == 0)
             $display("=== tb_dvi_tx PASS (encoder compare + serial bits) ===");
         else begin

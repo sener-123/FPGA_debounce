@@ -3,7 +3,7 @@
 // 功能    : 轨迹累积与平滑(参考算法"轨迹计算 + 平滑"环节的硬件实现)
 // 描述    : 1. 运动矢量换算为像素并累积得到相机运动轨迹;
 //           2. 用滑动平均(SMOOTH_WIN 窗口, 尾随因果实现)平滑轨迹;
-//           3. 补偿量 comp = 轨迹 - 平滑轨迹, 即待消除的高频抖动
+//           3. 补偿量 comp = 平滑轨迹 - 轨迹, 反向抵消高频抖动
 //              (低频的"有意识"运镜被保留), 幅度限幅在 ±MAX_SHIFT;
 //           4. 输出 comp_valid + comp_x/comp_y, 供 shift_compensate
 //              在下一帧起始时套用。
@@ -76,9 +76,9 @@ module trajectory_smooth #(
         // 2. 窗口滑动和: 和 - 最旧 + 最新
         sum_new_x = sum_x - win_x[SMOOTH_WIN-1] + traj_new_x;
         sum_new_y = sum_y - win_y[SMOOTH_WIN-1] + traj_new_y;
-        // 3. 补偿 = 轨迹 - 平滑轨迹(高频抖动), 限幅 ±MAX_SHIFT
-        comp_tmp_x = traj_new_x - (sum_new_x >>> LOG2_WIN);
-        comp_tmp_y = traj_new_y - (sum_new_y >>> LOG2_WIN);
+        // shift_compensate moves image content by +comp; oppose the motion.
+        comp_tmp_x = (sum_new_x >>> LOG2_WIN) - traj_new_x;
+        comp_tmp_y = (sum_new_y >>> LOG2_WIN) - traj_new_y;
     end
 
     always @(posedge px_clk or negedge rst_n) begin

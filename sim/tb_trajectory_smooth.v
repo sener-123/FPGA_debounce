@@ -2,7 +2,7 @@
 // 测试台  : tb_trajectory_smooth.v
 // 目的    : 验证轨迹累积 + 尾随滑动平均平滑 + 补偿限幅
 // 方法    : 运动矢量序列 mv = {4,4,4,4,0,0,0,0}(块), TILE=16,
-//           期望补偿序列 comp = {8,8,8,8,8,8,0,0}。
+//           期望补偿序列 comp = {-8,-8,-8,-8,-8,-8,0,0}。
 // 运行    : 在 ModelSim 中编译 rtl/trajectory_smooth.v 与本文件后
 //           vsim tb_trajectory_smooth -do "run -all"
 //=====================================================================
@@ -37,8 +37,8 @@ module tb_trajectory_smooth;
         motion_valid = 0; mv_x = 0; mv_y = 0;
         mv_seq[0] = 4;  mv_seq[1] = 4;  mv_seq[2] = 4;  mv_seq[3] = 4;
         mv_seq[4] = 0;  mv_seq[5] = 0;  mv_seq[6] = 0;  mv_seq[7] = 0;
-        exp_seq[0] = 8; exp_seq[1] = 8; exp_seq[2] = 8; exp_seq[3] = 8;
-        exp_seq[4] = 8; exp_seq[5] = 8; exp_seq[6] = 0; exp_seq[7] = 0;
+        exp_seq[0] = -8; exp_seq[1] = -8; exp_seq[2] = -8; exp_seq[3] = -8;
+        exp_seq[4] = -8; exp_seq[5] = -8; exp_seq[6] = 0; exp_seq[7] = 0;
 
         repeat (5) @(posedge clk);
         rst_n = 1;

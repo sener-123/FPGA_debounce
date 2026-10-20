@@ -28,3 +28,9 @@ sim_quick/*_log.txt
 
 # 仿真调试输出
 sim_quick/dbg_tb_out.txt
+
+# 旧PDS工程备份，不作为当前编译入口
+backup/
+
+# PDS IP generation timestamp
+pds/ip/**/.last_generated

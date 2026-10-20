@@ -181,8 +181,10 @@ module motion_estimate #(
                             dy_cnt       <= 3'd0;
                             busy         <= 1'b0;
                             motion_valid <= 1'b1;
-                            mv_x         <= {{2{best_x[3]}}, best_x};
-                            mv_y         <= {{2{best_y[3]}}, best_y};
+                            mv_x <= (sad < best_sad) ? {{2{dx_r[3]}}, dx_r}
+                                                      : {{2{best_x[3]}}, best_x};
+                            mv_y <= (sad < best_sad) ? {{2{dy_r[3]}}, dy_r}
+                                                      : {{2{best_y[3]}}, best_y};
                             fsm          <= 2'd0;
                         end else begin
                             dy_cnt <= dy_cnt + 3'd1;

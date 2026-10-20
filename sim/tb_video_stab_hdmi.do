@@ -14,6 +14,7 @@ vlog -work work ../rtl/stab_core.v
 vlog -work work ../rtl/shift_compensate.v
 
 # ---- HDMI 直出数据通路(本工程新增, 无 DDR3) ----
+vlog -work work ../rtl/pixel_stream_cdc.v
 vlog -work work ../rtl/hdmi_timing_direct.v
 vlog -work work ../rtl/dvi_encoder.v
 vlog -work work ../rtl/dvi_tx_top.v
@@ -22,7 +23,7 @@ vlog -work work ../rtl/dvi_tx_top.v
 vlog +define+SIM_SOURCE -work work ../rtl/video_stab_hdmi.v
 
 # ---- 仿真模型 ----
-vlog -work work pll_clk_sim.v
+vlog +define+SIM_CAMERA_PLL -work work pll_clk_sim.v
 vlog -work work oddrx1_model.v
 vlog -work work elvds_obuf_model.v
 vlog -work work sim_cam_source.v

@@ -63,15 +63,11 @@ module stab_core #(
     localparam AW = clog2(TILE_RAM_DEPTH);   // RAM 地址宽度
 
     //-----------------------------------------------------------------
-    // 帧乒乓选择: 帧 N 的块图写入 RAM[N%2]
+    // Switch only after the final block write has committed. Camera VSYNC
+    // can arrive while the last tile row is still being drained to RAM.
     //-----------------------------------------------------------------
     reg frame_parity;
-    always @(posedge px_clk or negedge rst_n) begin
-        if (!rst_n)
-            frame_parity <= 1'b0;
-        else if (px_sof)
-            frame_parity <= ~frame_parity;
-    end
+    reg have_previous_frame;
 
     //-----------------------------------------------------------------
     // 分块下采样(写侧)
@@ -80,6 +76,16 @@ module stab_core #(
     wire [12:0] ds_ram_waddr;
     wire [15:0] ds_ram_wdata;
     wire        ds_frame_done;
+
+    always @(posedge px_clk or negedge rst_n) begin
+        if (!rst_n) begin
+            frame_parity <= 1'b0;
+            have_previous_frame <= 1'b0;
+        end else if (ds_frame_done) begin
+            frame_parity <= ~frame_parity;
+            have_previous_frame <= 1'b1;
+        end
+    end
 
     downsample_tile #(
         .H_ACTIVE  (H_ACTIVE),
@@ -142,7 +148,7 @@ module stab_core #(
     ) u_me (
         .px_clk       (px_clk),
         .rst_n        (rst_n),
-        .start        (ds_frame_done),
+        .start        (ds_frame_done & have_previous_frame),
         .src_sel      (~frame_parity),   // 上一帧块图所在 RAM
         .ram0_raddr   (me_ram0_raddr),
         .ram1_raddr   (me_ram1_raddr),

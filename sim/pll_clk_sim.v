@@ -1,37 +1,38 @@
-//=====================================================================
-// 文件    : pll_clk_sim.v (仿真模型)
-// 功能    : PLL IP 的仿真替代模型(与用户 PDS 工程中的 pll IP 端口
-//           一致: pll_rst/clkin1/pll_lock/clkout0/clkout1)。
-//           无 DDR3 版: clkout0=210MHz(TMDS 5x); 仿真中 clkout0
-//           直通 clkin1(50MHz), 系统级测试台不检查 TMDS 串行位。
-//           DDR3 版: clkout0=74.25MHz, clkout1=371.25MHz; 仿真中
-//           clkout0 直通 50MHz, clkout1 冻结(不检查串行位)。
-// 使用    : 仿真编译本文件(顶层已直接例化 pll, 编译时以本文件
-//           替代 IP 即可)。
-//=====================================================================
+// Behavioral PLL model. SIM_CAMERA_PLL selects cam_pclk -> /2 and *2.5.
+// Otherwise the DDR3 test configuration uses clkin1 -> 1x and 5x.
+// SIM_FAST may freeze only the DDR3 serial clock; TMDS is tested separately.
 `timescale 1ns/1ps
-module pll (
-    input  wire pll_rst,     // 高有效复位
-    input  wire clkin1,      // 50MHz
-    output wire clkout0,     // 仿真: 直通 50MHz
-    output wire clkout1,     // 仿真: 250MHz
-    output wire pll_lock
-);
-
-    assign clkout0 = clkin1;
-
-    // 系统级测试台不检查 TMDS 串行位(由 tb_dvi_tx 单独验证),
-    // 仿真中将 5x 时钟冻结以大幅加速仿真; 如需观察串行器行为
-    // 可恢复为 250MHz 自由振荡: always #2 c5x = ~c5x;
-    reg c5x = 1'b0;
-    assign clkout1 = c5x;
-
-    reg lock_r = 1'b0;
-    initial begin
-        lock_r = 1'b0;
-        #2000;               // 2us
-        lock_r = 1'b1;
+module PLL(input wire rst, clkin1,
+           output wire clkout0, clkout1, lock);
+    realtime previous_edge = 0, input_period = 20.0;
+    always @(posedge clkin1) begin
+        if (previous_edge != 0) input_period = $realtime - previous_edge;
+        previous_edge = $realtime;
     end
-    assign pll_lock = lock_r;
-
+    reg pixel_div = 0;
+    always @(posedge clkin1 or posedge rst)
+        if (rst) pixel_div <= 0;
+        else pixel_div <= ~pixel_div;
+    reg serial_clk = 0;
+`ifdef SIM_CAMERA_PLL
+    assign clkout0 = pixel_div;
+    always begin
+        #(input_period / 5.0);
+        serial_clk = rst ? 1'b0 : ~serial_clk;
+    end
+`else
+    assign clkout0 = clkin1;
+`ifndef SIM_FAST
+    always begin
+        #(input_period / 10.0);
+        serial_clk = rst ? 1'b0 : ~serial_clk;
+    end
+`endif
+`endif
+    assign clkout1 = serial_clk;
+    reg [5:0] lock_count = 0;
+    always @(posedge clkin1 or posedge rst)
+        if (rst) lock_count <= 0;
+        else if (lock_count != 63) lock_count <= lock_count + 1'b1;
+    assign lock = !rst && (lock_count == 63);
 endmodule

@@ -118,6 +118,7 @@ module disp_reader #(
     reg [10:0] flush_cnt;
     reg [11:0] wait_cnt;
     reg [19:0] pop_cnt;             // 本帧已取像素数
+    reg [19:0] req_cnt;             // Requests issued, including in-flight reads.
     reg        pop_valid;           // rd_en 后 1 拍(读数据有效)
 
     always @(posedge rd_clk or negedge rst_n) begin
@@ -126,6 +127,7 @@ module disp_reader #(
             flush_cnt  <= 11'd0;
             wait_cnt   <= 12'd0;
             pop_cnt    <= 20'd0;
+            req_cnt    <= 20'd0;
             pop_valid  <= 1'b0;
             black_left <= 20'd0;
             win_w      <= H_ACTIVE[11:0];
@@ -160,6 +162,8 @@ module disp_reader #(
                 end
 
                 S_FLUSH : begin
+                    pop_valid <= 1'b0;
+                    req_cnt <= 20'd0;
                     fifo_flush <= 1'b1;          // 复位显示 FIFO 两侧
                     if (flush_cnt == T_FLUSH-1) begin
                         flush_cnt <= 11'd0;
@@ -171,6 +175,7 @@ module disp_reader #(
                 end
 
                 S_WAIT : begin
+                    pop_valid <= 1'b0;
                     // 等待 DDR3 控制器复位读 FIFO 并重新突发
                     if (wait_cnt == T_START-1) begin
                         pop_cnt <= 20'd0;
@@ -182,6 +187,7 @@ module disp_reader #(
 
                 S_RUN : begin
                     if (load_edge) begin
+                        pop_valid <= 1'b0;
                         // 帧同步提前到来(异常/切换): 重新同步
                         win_w      <= win_w_w;
                         win_h      <= win_h_w;
@@ -193,7 +199,9 @@ module disp_reader #(
                         state      <= S_FLUSH;
                     end else begin
                         // 以 FIFO 空间节流读请求
-                        ddr3_rd_en <= ~fifo_afull;
+                        ddr3_rd_en <= ~fifo_afull && (req_cnt < total);
+                        if (!fifo_afull && req_cnt < total)
+                            req_cnt <= req_cnt + 20'd1;
                         pop_valid  <= ddr3_rd_en;
                         if (pop_valid) begin
                             fifo_wen   <= 1'b1;
@@ -201,6 +209,8 @@ module disp_reader #(
                             if (pop_cnt == total-1) begin
                                 // 本帧取完: 若显示行数大于帧高则补黑
                                 pop_cnt <= 20'd0;
+                                pop_valid <= 1'b0;
+                                ddr3_rd_en <= 1'b0;
                                 if (black_left != 20'd0)
                                     state <= S_BLACK;
                                 else

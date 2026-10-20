@@ -73,6 +73,7 @@ module shift_compensate #(
     reg [31:0] rd_frame_base;         // 本帧读基址 = frame_base - DY*W - DX
 
     reg [5:0] comp_x_r, comp_y_r;     // 补偿量锁存
+    reg [5:0] frame_dx, frame_dy;     // Active frame offset, frozen with read base.
     reg [11:0] c0_r, r0_r, cw_r, ch_r; // 裁剪窗口锁存(帧起始生效)
 
     // 当前帧补偿: DX/DY ∈ [1, 2*MAX_SHIFT+1]
@@ -105,7 +106,9 @@ module shift_compensate #(
     // 源坐标在本帧内(否则输出黑色, 对应 fixBorder)
     // 源行 = y_eff - DY, 源列 = x_eff - DX; 越界只在左上(负方向),
     // 因 y_eff/x_eff 自身不超过帧尺寸。
-    wire in_frame = (y_eff >= {6'd0, dy_w}) & (x_eff >= {6'd0, dx_w});
+    wire [5:0] active_dx = px_sof ? dx_w : frame_dx;
+    wire [5:0] active_dy = px_sof ? dy_w : frame_dy;
+    wire in_frame = (y_eff >= {6'd0, active_dy}) & (x_eff >= {6'd0, active_dx});
 
     // 读地址 = rd_base_eff + y_eff*W + x_eff (两补码相加, 取低位)
     wire [31:0] rd_sum  = rd_base_eff + (y_eff * H_ACTIVE) + x_eff;
@@ -118,6 +121,8 @@ module shift_compensate #(
             rd_frame_base <= 32'd0;
             comp_x_r      <= 6'd0;
             comp_y_r      <= 6'd0;
+            frame_dx      <= SHIFT_BASE;
+            frame_dy      <= SHIFT_BASE;
             c0_r          <= 12'd0;
             r0_r          <= 12'd0;
             cw_r          <= 12'd0;
@@ -133,6 +138,8 @@ module shift_compensate #(
             if (px_sof) begin
                 frame_base    <= wr_cnt;
                 rd_frame_base <= wr_cnt - dy_w*H_ACTIVE - dx_w;
+                frame_dx      <= dx_w;
+                frame_dy      <= dy_w;
                 c0_r          <= crop_col0;
                 r0_r          <= crop_row0;
                 cw_r          <= crop_w;

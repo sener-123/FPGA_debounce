@@ -1,0 +1,18 @@
+{
+  "board": "ALIENTEK Davinci Pro Logos2",
+  "device": "PG2L200H-6IFBB484",
+  "top": "davinci_hdmi_top",
+  "ddr3": false,
+  "camera_sgm": 0,
+  "pds_version": "2022.2-SP4.2 build 132111",
+  "pll_mhz": {
+    "input": 84,
+    "pixel": 42,
+    "serial": 210
+  },
+  "size": 9188552,
+  "sha256": "d7a379a0fdafc0907732e137c4d8d7f1ccb9e8ef70e3bf25793af25afa55ef02",
+  "timing_report": "All Constraints Met (current constraints; external IO delays incomplete)",
+  "camera_clock_route": "U18 requires PAP_CLOCK_DEDICATED_ROUTE FALSE",
+  "hardware_tested": false
+}
